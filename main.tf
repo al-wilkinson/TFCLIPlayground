@@ -62,3 +62,49 @@ resource "azurerm_network_security_group" "nsg" {
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 }
+
+resource "azurerm_public_ip" "pubip" {
+  name                = "terrastuff-ip"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  allocation_method   = "Dynamic"
+}
+
+resource "azurerm_network_interface" "vnic" {
+  name                = "terrastuff-vm-nic"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  ip_configuration {
+    name                          = "terrastuff-vm-ip"
+    subnet_id                     = azurerm_subnet.snet.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.pubip.id
+  }
+}
+
+resource "azurerm_linux_virtual_machine" "vm" {
+  name                = "terrastuff-vm"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  size           = "Standard_B1s"
+  admin_username = "adminuser"
+  # This is a test, torn down immediately. Don't to this otherwise.
+  disable_password_authentication = "false"
+  admin_password = "Howtoprotectthis1?"
+
+  network_interface_ids = [azurerm_network_interface.vnic.id]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-focal"
+    sku       = "20_04-lts-gen2"
+    version   = "latest"
+  }
+}
