@@ -27,7 +27,8 @@ resource "azurerm_key_vault" "kvt" {
 
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = data.azurerm_client_config.current.object_id
+    #object_id = data.azurerm_client_config.current.object_id
+    object_id = azurerm_linux_virtual_machine.vm.identity.0.principal_id
 
     key_permissions = [
       "Get",
@@ -87,12 +88,17 @@ resource "azurerm_linux_virtual_machine" "vm" {
   name                = "terrastuff-vm"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
+  size                = "Standard_B1s"
+  admin_username      = "adminuser"
 
-  size           = "Standard_B1s"
-  admin_username = "adminuser"
-  # This is a test, torn down immediately. Don't to this otherwise.
-  disable_password_authentication = "false"
-  admin_password = "Howtoprotectthis1?"
+  admin_ssh_key {
+    username   = "adminuser"
+    public_key = file("~/Documents/GitHub/pubkeys/azvm.pub")
+  }
+
+  # This is for quick tests, torn down immediately. Don't do it this way otherwise.
+  #disable_password_authentication = "false"
+  #admin_password = "Howtoprotectthis1?"
 
   network_interface_ids = [azurerm_network_interface.vnic.id]
 
@@ -107,4 +113,12 @@ resource "azurerm_linux_virtual_machine" "vm" {
     sku       = "20_04-lts-gen2"
     version   = "latest"
   }
+
+  identity {
+    type = "SystemAssigned"
+  }
 }
+
+output "identity_principal_id" {
+  value = azurerm_linux_virtual_machine.vm.identity.0.principal_id
+}  
