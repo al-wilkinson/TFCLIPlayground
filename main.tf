@@ -9,6 +9,10 @@ provider "azurerm" {
 
 data "azurerm_client_config" "current" {}
 
+data "template_file" "linux_vm_cloud_init" {
+  template = file("customdata.sh")
+}
+
 resource "azurerm_resource_group" "rg" {
   name     = "terrastuff"
   location = "Australia East"
@@ -42,7 +46,9 @@ resource "azurerm_key_vault" "kvt" {
     secret_permissions = [
       "Get",
       "List",
-      "Set"
+      "Set",
+      "Delete",
+      "Purge"
     ]  
   }
 }
@@ -123,6 +129,8 @@ resource "azurerm_linux_virtual_machine" "vm" {
     version   = "latest"
   }
 
+  custom_data = base64encode(data.template_file.linux_vm_cloud_init.rendered)
+
   identity {
     type = "SystemAssigned"
   }
@@ -133,5 +141,5 @@ output "identity_principal_id" {
 }  
 
 output "public_IP" {
-  value = azurerm_public_ip.pubip.*.ip_address
+  value = azurerm_linux_virtual_machine.vm.public_ip_address
 }
